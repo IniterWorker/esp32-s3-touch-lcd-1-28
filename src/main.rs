@@ -18,6 +18,17 @@ use embedded_graphics::{
 };
 use gc9a01::{mode::BufferedGraphics, prelude::*, Gc9a01, SPIDisplayInterface};
 
+type BoxedDisplayDriver<'a> = Box<
+    Gc9a01<
+        SPIInterface<
+            SpiDeviceDriver<'a, spi::SpiDriver<'a>>,
+            PinDriver<'a, gpio::AnyOutputPin, gpio::Output>,
+        >,
+        DisplayResolution240x240,
+        BufferedGraphics<DisplayResolution240x240>,
+    >,
+>;
+
 /// Test Function : will be removed later
 fn draw<I: WriteOnlyDataCommand, D: DisplayDefinition>(
     display: &mut Gc9a01<I, D, BufferedGraphics<D>>,
@@ -113,16 +124,7 @@ fn main() {
 
     let interface = SPIDisplayInterface::new(spi_device, dc_output);
 
-    let mut display_driver: Box<
-        Gc9a01<
-            SPIInterface<
-                SpiDeviceDriver<'_, spi::SpiDriver<'_>>,
-                PinDriver<'_, gpio::AnyOutputPin, gpio::Output>,
-            >,
-            DisplayResolution240x240,
-            gc9a01::mode::BufferedGraphics<DisplayResolution240x240>,
-        >,
-    > = Box::new(
+    let mut display_driver: BoxedDisplayDriver = Box::new(
         Gc9a01::new(
             interface,
             DisplayResolution240x240,
