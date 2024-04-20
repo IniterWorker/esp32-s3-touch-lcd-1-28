@@ -37,3 +37,7 @@ esp-idf-hal = { version = "0.43.1" }
 
 [build-dependencies]
 embuild = "0.31.3"
+
+[dev-dependencies.cargo-husky]
+version = "1"
+features = ["user-hooks"]
