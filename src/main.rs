@@ -1,11 +1,11 @@
 use esp_idf_hal::delay::{Delay, FreeRtos};
 use esp_idf_hal::gpio::{self, OutputPin, PinDriver};
-use esp_idf_hal::prelude::*;
 use esp_idf_hal::spi::{
     self,
     config::{Config, Mode, Phase, Polarity},
     SpiDeviceDriver,
 };
+use esp_idf_hal::{i2c, prelude::*};
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop, hal::peripherals::Peripherals, timer::EspTaskTimerService,
 };
@@ -17,6 +17,7 @@ use embedded_graphics::{
     Drawable,
 };
 use gc9a01::{mode::BufferedGraphics, prelude::*, Gc9a01, SPIDisplayInterface};
+use qmi8658::Qmi8658;
 
 type BoxedDisplayDriver<'a> = Box<
     Gc9a01<
@@ -98,6 +99,10 @@ fn main() {
     let dc = pins.gpio8;
     let reset = pins.gpio14;
     let backlight = pins.gpio2;
+    let i2c_sda = pins.gpio6;
+    let i2c_scl = pins.gpio7;
+    let _qmi8658_int1 = pins.gpio4;
+    let _qmi8658_int2 = pins.gpio3;
 
     let cs_output = cs;
     let dc_output = PinDriver::output(dc.downgrade_output()).unwrap();
@@ -105,6 +110,16 @@ fn main() {
     let mut reset_output = PinDriver::output(reset.downgrade_output()).unwrap();
 
     backlight_output.set_high().unwrap();
+
+    let i2c =
+        i2c::I2cDriver::new(peripherals.i2c0, i2c_sda, i2c_scl, &i2c::I2cConfig::new()).unwrap();
+    let mut qmi8658_device = Qmi8658::new_secondary_address(i2c, delay);
+    log::info!("Driver configured!");
+
+    match qmi8658_device.get_device_id() {
+        Ok(value) => log::info!("QMI8658 Found: {:?}", value),
+        Err(e) => log::error!("QMI8658 Error: {:?}", e),
+    }
 
     let driver = spi::SpiDriver::new(
         peripherals.spi2,

@@ -31,6 +31,7 @@ embassy = [
 log = { version = "0.4", default-features = false }
 esp-idf-svc = { version = "0.48", default-features = false }
 gc9a01-rs = { version = "0.2.1" }
+qmi8658 = { git = "https://github.com/IniterWorker/qmi8658.git", branch = "master" }
 embedded-graphics = "0.8.1"
 anyhow = "1.0.82"
 esp-idf-hal = { version = "0.43.1" }
