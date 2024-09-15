@@ -35,7 +35,7 @@ anyhow = "1.0.82"
 esp-idf-hal = { version = "0.44.1" }
 
 # Drivers
-gc9a01-rs = { version = "0.3.0" }
+gc9a01-rs = { git = "https://github.com/IniterWorker/gc9a01", rev = "7b7509a98c66031b1a0c10407ab43916dab28beb" }
 
 # Both qmi8658 and cst816s-rs are work-in-progress
 qmi8658 = { git = "https://github.com/IniterWorker/qmi8658", rev = "a5d47c98bc84213baba3edea1199814e2c1cbec6", features = [

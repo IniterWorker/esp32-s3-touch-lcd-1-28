@@ -1,7 +1,11 @@
 use cst816s::command::KeyEvent;
 use embedded_graphics::{
+    framebuffer::Framebuffer,
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
-    pixelcolor::Rgb565,
+    pixelcolor::{
+        raw::{LittleEndian, RawU16},
+        Rgb565,
+    },
     prelude::{Point, Primitive, RgbColor},
     primitives::{Circle, PrimitiveStyleBuilder},
     text::Text,
@@ -36,7 +40,10 @@ impl<'a> DrawEngine<'a> {
         }
     }
 
-    pub fn draw<I: WriteOnlyDataCommand, D: DisplayDefinition>(
+    pub fn draw<
+        I: WriteOnlyDataCommand,
+        D: DisplayDefinition<Buffer = Framebuffer<Rgb565, RawU16, LittleEndian, 240, 240, 115200>>,
+    >(
         &mut self,
         display: &mut Gc9a01<I, D, BufferedGraphics<D>>,
         context: &DrawContext,

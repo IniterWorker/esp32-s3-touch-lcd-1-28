@@ -870,12 +870,11 @@ dependencies = [
 [[package]]
 name = "gc9a01-rs"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e9b54e27d915459153f29b0a39bb907fb85ae622121f96052742e74b51db92d"
+source = "git+https://github.com/IniterWorker/gc9a01?rev=7b7509a98c66031b1a0c10407ab43916dab28beb#7b7509a98c66031b1a0c10407ab43916dab28beb"
 dependencies = [
  "display-interface",
  "display-interface-spi",
- "embedded-graphics-core",
+ "embedded-graphics",
  "embedded-hal 1.0.0",
 ]
 

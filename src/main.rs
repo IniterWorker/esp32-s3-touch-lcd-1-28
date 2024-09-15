@@ -60,7 +60,7 @@ fn app_main() -> anyhow::Result<()> {
 
     ThreadSpawnConfiguration {
         name: Some(b"display\0"),
-        stack_size: 7000, // only the Builder::new().stack_size is real
+        stack_size: 120000, // only the Builder::new().stack_size is real
         priority: 15,
         pin_to_core: Some(Core::Core1),
         ..Default::default()
@@ -70,7 +70,7 @@ fn app_main() -> anyhow::Result<()> {
     let shared_orientation_cpy = shared_orientation.clone();
     let shared_cursor_cpy = shared_cursor.clone();
     let _thread_1 = std::thread::Builder::new()
-        .stack_size(7000)
+        .stack_size(120000)
         .spawn(move || {
             thread_display(ThreadDisplayData {
                 shared_orientation: shared_orientation_cpy,
