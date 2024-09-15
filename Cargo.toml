@@ -29,15 +29,43 @@ embassy = [
 
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.48", default-features = false }
-gc9a01-rs = { version = "0.2.1" }
-qmi8658 = { git = "https://github.com/IniterWorker/qmi8658.git", branch = "master" }
+esp-idf-svc = { version = "0.49", default-features = false }
 embedded-graphics = "0.8.1"
 anyhow = "1.0.82"
-esp-idf-hal = { version = "0.43.1" }
+esp-idf-hal = { version = "0.44.1" }
+
+# Drivers
+gc9a01-rs = { version = "0.3.0" }
+
+# Both qmi8658 and cst816s-rs are work-in-progress
+qmi8658 = { git = "https://github.com/IniterWorker/qmi8658", rev = "a5d47c98bc84213baba3edea1199814e2c1cbec6", features = [
+    "loglib",
+] }
+cst816s-rs = { git = "https://github.com/IniterWorker/cst816s", rev = "c63f4414d64b64702c7f5639a887ce8d6886ab8d", features = [
+    "loglib",
+    "std",
+] }
+
+# gc9a01-rs = { path = "../gc9a01" }
+# qmi8658 = { path = "../qmi8658", features = ["loglib"] }
+# cst816s-rs = { path = "../cst816s", features = ["loglib", "std"] }
+
+
+# Helpers
+arrayvec = "0.7.6"
+
+# Fork support embedded-hal 1.0.0
+shared-bus = { git = "https://github.com/Sycrosity/shared-bus.git", version = "0.4.0", features = [
+    "std",
+] }
+
+# FPS clock helper
+embedded-fps = { version = "0.1.0", features = ["std"] }
 
 [build-dependencies]
-embuild = "0.31.3"
+embuild = "0.32.0" # qmi8658 = { path = "../qmi8658", features = ["loglib"] }
+build-data = "0"
+anyhow = "1"
 
 [dev-dependencies.cargo-husky]
 version = "1"
