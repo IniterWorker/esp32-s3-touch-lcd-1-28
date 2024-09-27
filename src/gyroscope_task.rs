@@ -1,4 +1,3 @@
-use anyhow::Ok;
 use esp_idf_hal::gpio::{AnyIOPin, PinDriver};
 use esp_idf_hal::task::block_on;
 use esp_idf_hal::{delay::Delay, i2c};
@@ -17,7 +16,7 @@ pub struct SensorsTaskData<'a> {
     pub shared_orientation: Arc<Mutex<Orientation>>,
     pub delay: Delay,
     pub bus: &'a BusManager<Mutex<i2c::I2cDriver<'a>>>,
-    pub int1: AnyIOPin,
+    pub _int1: AnyIOPin,
     pub int2: AnyIOPin,
 }
 
@@ -77,7 +76,7 @@ pub fn sensors_setup(
         .config_fifo(FIFOMode::Fifo, FIFOSize::Size128, IntDirection::Int2, 64)
         .unwrap();
 
-    Ok(())
+    anyhow::Result::Ok(())
 }
 
 pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
@@ -88,7 +87,7 @@ pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
     let mut gyroscope = Qmi8658::new_secondary_address(bus, data.delay);
 
     let _ = match gyroscope.get_device_id() {
-        std::result::Result::Ok(rev) => {
+        Ok(rev) => {
             log::info!("QMI8658 Device ID: {:?}", rev);
             anyhow::Result::Ok(())
         }
@@ -99,7 +98,7 @@ pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
     };
 
     let _ = match gyroscope.get_device_revision_id() {
-        std::result::Result::Ok(rev) => {
+        Ok(rev) => {
             log::info!("QMI8658 Device Revision ID: {:x}", rev);
             anyhow::Result::Ok(())
         }
@@ -110,7 +109,7 @@ pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
     };
 
     let is_gyro_not_dead = match gyroscope.gyroscope_test() {
-        std::result::Result::Ok(()) => {
+        Ok(()) => {
             log::info!("Gyroscope SelfTest Okay");
             true
         }
@@ -121,7 +120,7 @@ pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
     };
 
     let is_acc_not_dead = match gyroscope.accelerometer_test() {
-        std::result::Result::Ok(()) => {
+        Ok(()) => {
             log::info!("Accelerometer SelfTest Okay");
             true
         }
@@ -132,7 +131,7 @@ pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
     };
 
     let shared = data.shared_orientation.lock();
-    if let core::result::Result::Ok(mut shared) = shared {
+    if let Ok(mut shared) = shared {
         shared.is_gyro_not_dead = is_gyro_not_dead;
         shared.is_acc_not_dead = is_acc_not_dead;
     }
@@ -145,7 +144,7 @@ pub fn gyroscope_task(data: SensorsTaskData) -> anyhow::Result<()> {
         if result.is_ok() {
             if let Err(err) = gyroscope.read_fifo_data(|idx, acc, gyro| {
                 let shared = data.shared_orientation.lock();
-                if let core::result::Result::Ok(mut shared) = shared {
+                if let Ok(mut shared) = shared {
                     shared.update(idx, gyro, acc)
                 }
             }) {

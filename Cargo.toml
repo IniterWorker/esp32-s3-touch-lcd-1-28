@@ -35,13 +35,13 @@ anyhow = "1.0.82"
 esp-idf-hal = { version = "0.44.1" }
 
 # Drivers
-gc9a01-rs = { git = "https://github.com/IniterWorker/gc9a01", rev = "7b7509a98c66031b1a0c10407ab43916dab28beb" }
+gc9a01-rs = { version = "0.3.1" }
 
 # Both qmi8658 and cst816s-rs are work-in-progress
 qmi8658 = { git = "https://github.com/IniterWorker/qmi8658", rev = "a5d47c98bc84213baba3edea1199814e2c1cbec6", features = [
     "loglib",
 ] }
-cst816s-rs = { git = "https://github.com/IniterWorker/cst816s", rev = "c63f4414d64b64702c7f5639a887ce8d6886ab8d", features = [
+cst816s-rs = { git = "https://github.com/IniterWorker/cst816s", rev = "966a0761f992c63ea1a953ba3d4a3fab8de15db0", features = [
     "loglib",
     "std",
 ] }
@@ -52,21 +52,34 @@ cst816s-rs = { git = "https://github.com/IniterWorker/cst816s", rev = "c63f4414d
 
 
 # Helpers
-arrayvec = "0.7.6"
 
 # Fork support embedded-hal 1.0.0
 shared-bus = { git = "https://github.com/Sycrosity/shared-bus.git", version = "0.4.0", features = [
     "std",
 ] }
 
-# FPS clock helper
-embedded-fps = { version = "0.1.0", features = ["std"] }
+# LVGL
+cstr_core = "0.2.1"
+lvgl = { version = "0.6.2", default-features = false, features = [
+    "embedded_graphics",
+    "unsafe_no_autoinit",
+] }
+lvgl-sys = { version = "0.6.2" }
+
+[[bin]]
+name = "esp32-s3-touch-lcd-1-28"
+harness = false                  # do not use the built in cargo test harneess -> resolve rust-analyzer errors
 
 [build-dependencies]
-embuild = "0.32.0" # qmi8658 = { path = "../qmi8658", features = ["loglib"] }
+embuild = "0.32.0"
 build-data = "0"
 anyhow = "1"
 
 [dev-dependencies.cargo-husky]
 version = "1"
 features = ["user-hooks"]
+
+# Fork support esp32 lvgl
+[patch.crates-io]
+lvgl = { git = "https://github.com/enelson1001/lv_binding_rust" }
+lvgl-sys = { git = "https://github.com/enelson1001/lv_binding_rust" }

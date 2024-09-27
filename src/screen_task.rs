@@ -1,9 +1,21 @@
-use std::sync::{Arc, Mutex};
+use std::sync;
+use std::time::Instant;
 
-use cst816s::command::KeyEvent;
-use embedded_fps::{StdClock, FPS};
+use cst816s::command::Touch;
+use cst816s::command::TouchEvent;
+use embedded_graphics::prelude::Point;
 use esp_idf_hal::delay::Delay;
 use esp_idf_hal::gpio::{self, OutputPin, PinDriver};
+
+use lvgl::input_device::{
+    pointer::{Pointer, PointerInputData},
+    InputDriver,
+};
+use lvgl::style::Style;
+use lvgl::widgets::Arc;
+use lvgl::{Align, Color, Display, DrawBuffer, Part, Widget};
+
+use embedded_graphics::draw_target::DrawTarget;
 
 use esp_idf_hal::spi::{
     self,
@@ -13,25 +25,14 @@ use esp_idf_hal::spi::{
 
 use esp_idf_hal::prelude::*;
 
-use gc9a01::{mode::BufferedGraphics, prelude::*, Gc9a01, SPIDisplayInterface};
+use gc9a01::{prelude::*, Gc9a01, SPIDisplayInterface};
 
 use crate::gyroscope_task::Orientation;
-use crate::screen_draw::{DrawContext, DrawEngine};
-
-type BoxedDisplayDriver<'a> = Box<
-    Gc9a01<
-        SPIInterface<
-            SpiDeviceDriver<'a, spi::SpiDriver<'a>>,
-            PinDriver<'a, gpio::AnyOutputPin, gpio::Output>,
-        >,
-        DisplayResolution240x240,
-        BufferedGraphics<DisplayResolution240x240>,
-    >,
->;
 
 pub struct ThreadDisplayData<'a> {
-    pub shared_orientation: Arc<Mutex<Orientation>>,
-    pub shared_cursor: Arc<Mutex<KeyEvent>>,
+    #[allow(dead_code)]
+    pub shared_orientation: sync::Arc<sync::Mutex<Orientation>>,
+    pub shared_cursor: sync::Arc<sync::Mutex<Option<TouchEvent>>>,
     pub backlight: gpio::AnyOutputPin,
     pub cs: gpio::AnyOutputPin,
     pub dc: gpio::AnyOutputPin,
@@ -52,43 +53,88 @@ pub fn thread_display(mut data: ThreadDisplayData) -> anyhow::Result<()> {
     let spi_device = SpiDeviceDriver::new(data.driver, Some(data.cs), &config)?;
     let interface = SPIDisplayInterface::new(spi_device, dc_output);
     backlight_output.set_low()?;
-    let mut display_driver: BoxedDisplayDriver = Box::new(
-        Gc9a01::new(
-            interface,
-            DisplayResolution240x240,
-            DisplayRotation::Rotate180,
-        )
-        .into_buffered_graphics(),
-    );
+
+    // Initialize lvgl
+    lvgl::init();
+
+    let mut display_driver = Box::new(Gc9a01::new(
+        interface,
+        DisplayResolution240x240,
+        DisplayRotation::Rotate180,
+    ))
+    .into_buffered_graphics();
     display_driver
         .reset(&mut reset_output, &mut data.delay)
         .ok();
     display_driver.init(&mut data.delay).ok();
-    backlight_output.set_high()?;
+    backlight_output.set_high().unwrap();
 
-    let mut engine = DrawEngine::new();
-    let mut engine_context = DrawContext::default();
-    let mut fps_counter = FPS::<100, _>::new(StdClock::default());
+    display_driver.clear();
 
-    loop {
-        let orientation = data.shared_orientation.try_lock();
+    let buffer = DrawBuffer::<{ 12 * 240_usize }>::default();
+    let display = Display::register(buffer, 240, 240, |refresh| {
+        display_driver.draw_iter(refresh.as_pixels()).unwrap();
+    })
+    .unwrap();
 
-        if let Ok(orientation) = orientation {
-            engine_context.counter_lock += 1;
-            engine_context.orientation = *orientation;
-        }
+    // Create screen and widgets
+    let mut screen = display.get_scr_act().unwrap();
 
+    let mut screen_style = Style::default();
+    screen_style.set_bg_color(Color::from_rgb((255, 255, 255)));
+    screen_style.set_radius(0);
+
+    screen.add_style(Part::Main, &mut screen_style);
+
+    // Create the gauge
+    let mut arc_style = Style::default();
+    // Set a background color and a radius
+    arc_style.set_bg_color(Color::from_rgb((192, 192, 192)));
+
+    // Create the arc object
+    let mut arc = Arc::create(&mut screen).unwrap();
+    arc.add_style(Part::Main, &mut arc_style);
+    arc.set_size(200, 200);
+    arc.set_align(Align::Center, 0, 0);
+    arc.set_start_angle(135).unwrap();
+    arc.set_end_angle(135).unwrap();
+
+    // The read_touchscreen_cb is used by Lvgl to detect touchscreen presses and releases
+    let read_touchscreen_cb = || {
         let cursor = data.shared_cursor.try_lock();
 
-        if let Ok(cursor) = cursor {
-            engine_context.cursor = *cursor;
-        }
-        engine_context.counter += 1;
+        if let Ok(mut cursor) = cursor {
+            if let Some(event) = *cursor {
+                let ret = match event.touch_type {
+                    Touch::Up => PointerInputData::Touch(Point::new(0, 0)).released().once(),
+                    Touch::Down | Touch::Contact => {
+                        PointerInputData::Touch(Point::new(event.x as i32, event.y as i32))
+                            .pressed()
+                            .once()
+                    }
+                };
 
-        if let Ok(_fps) = fps_counter.try_tick() {
-            display_driver.clear();
-            engine.draw(&mut display_driver, &engine_context);
-            display_driver.flush().ok();
+                *cursor = None;
+
+                ret
+            } else {
+                PointerInputData::Touch(Point::new(0, 0)).released().once()
+            }
+        } else {
+            PointerInputData::Touch(Point::new(0, 0)).released().once()
         }
+    };
+
+    // Register a new input device that's capable of reading the current state of the input
+    let _touch_screen = Pointer::register(read_touchscreen_cb, &display).unwrap();
+
+    loop {
+        let start = Instant::now();
+
+        lvgl::task_handler();
+        data.delay.delay_ms(20);
+        display_driver.flush().ok();
+
+        lvgl::tick_inc(Instant::now().duration_since(start));
     }
 }

@@ -1,4 +1,4 @@
-use cst816s::command::{IrqCtl, KeyEvent, MotionMask};
+use cst816s::command::{IrqCtl, MotionMask, TouchEvent};
 use cst816s::Cst816s;
 use esp_idf_hal::gpio::{AnyIOPin, OutputPin, PinDriver};
 use esp_idf_hal::task::block_on;
@@ -7,7 +7,7 @@ use shared_bus::BusManager;
 use std::sync::{Arc, Mutex};
 
 pub struct TouchTaskData<'a> {
-    pub shared_cursor: Arc<Mutex<KeyEvent>>,
+    pub shared_cursor: Arc<Mutex<Option<TouchEvent>>>,
     pub delay: Delay,
     pub bus: &'a BusManager<Mutex<i2c::I2cDriver<'a>>>,
     pub int1: AnyIOPin,
@@ -61,10 +61,8 @@ pub fn touch_task(mut data: TouchTaskData) -> anyhow::Result<()> {
         let event = touch.read_events();
 
         if let Ok(event) = event {
-            if let Some(key) = event.report_key::<240, 240>() {
-                let mut value = data.shared_cursor.lock().unwrap();
-                *value = key;
-            }
+            let mut value = data.shared_cursor.lock().unwrap();
+            *value = Some(event.points[0]);
         }
 
         if result.is_ok() {

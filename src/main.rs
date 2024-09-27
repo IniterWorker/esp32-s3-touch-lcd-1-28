@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use cst816s::command::KeyEvent;
+use cst816s::command::TouchEvent;
 use esp_idf_hal::cpu::Core;
 use esp_idf_hal::delay::Delay;
 use esp_idf_hal::gpio::{self};
@@ -15,7 +15,6 @@ use crate::gyroscope_task::{gyroscope_task, Orientation, SensorsTaskData};
 use crate::screen_task::{thread_display, ThreadDisplayData};
 
 mod gyroscope_task;
-mod screen_draw;
 mod screen_task;
 mod touch_task;
 
@@ -55,22 +54,27 @@ fn app_main() -> anyhow::Result<()> {
 
     log::info!("Driver configured!");
 
+    // Shared entities
     let shared_orientation: Arc<Mutex<Orientation>> = Arc::new(Mutex::new(Orientation::default()));
-    let shared_cursor: Arc<Mutex<KeyEvent>> = Arc::new(Mutex::new(KeyEvent::default()));
+    let shared_cursor: Arc<Mutex<Option<TouchEvent>>> = Arc::new(Mutex::new(None));
 
+    // Display task
     ThreadSpawnConfiguration {
         name: Some(b"display\0"),
-        stack_size: 120000, // only the Builder::new().stack_size is real
+        stack_size: 7000 + (240 * 240 * 2) + (240 * 12), // only the Builder::new().stack_size is real
         priority: 15,
-        pin_to_core: Some(Core::Core1),
+        pin_to_core: Some(Core::Core1), // Dedicates the `Core::Core1` to display
         ..Default::default()
     }
     .set()?;
 
+    // The first 7000 bytes are hosting the common stack
+    // The next 240*240*2 bytes are hosting the buffer from the driver
+    // The next 240*12 bytes are hosting the 12 row in the lgvl buffer
     let shared_orientation_cpy = shared_orientation.clone();
     let shared_cursor_cpy = shared_cursor.clone();
     let _thread_1 = std::thread::Builder::new()
-        .stack_size(120000)
+        .stack_size(7000 + (240 * 240 * 2) + (240 * 12))
         .spawn(move || {
             thread_display(ThreadDisplayData {
                 shared_orientation: shared_orientation_cpy,
@@ -84,6 +88,7 @@ fn app_main() -> anyhow::Result<()> {
             })
         })?;
 
+    // Gyroscope task
     ThreadSpawnConfiguration {
         name: Some(b"gyroscope\0"),
         stack_size: 7000, // only the Builder::new().stack_size is real
@@ -101,11 +106,12 @@ fn app_main() -> anyhow::Result<()> {
                 shared_orientation: shared_orientation_cpy,
                 bus,
                 delay: Delay::new_default(),
-                int1: qmi8658_int1.into(),
+                _int1: qmi8658_int1.into(),
                 int2: qmi8658_int2.into(),
             })
         })?;
 
+    // Touch screen task
     ThreadSpawnConfiguration {
         name: Some(b"touch\0"),
         stack_size: 7000, // only the Builder::new().stack_size is real
