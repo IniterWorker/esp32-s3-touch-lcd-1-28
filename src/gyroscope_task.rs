@@ -47,7 +47,7 @@ pub fn sensors_setup(
     ctrl3.set_gst(false);
 
     if let Err(e) = qmi8658_device.set_ctrl3(ctrl3) {
-        log::error!("QMI8658 write set_ctrl7 error: {:?}", e);
+        log::error!("QMI8658 write set_ctrl3 error: {:?}", e);
     }
 
     // let mut ctrl5: Ctrl5Register = Ctrl5Register(0);
@@ -67,7 +67,7 @@ pub fn sensors_setup(
     ctrl8.set_ctrl9_handshake_type(true);
 
     if let Err(e) = qmi8658_device.set_ctrl8(ctrl8) {
-        log::error!("QMI8658 write set_ctrl7 error: {:?}", e);
+        log::error!("QMI8658 write set_ctrl8 error: {:?}", e);
     }
 
     log::info!("Setup sensors task started!");
