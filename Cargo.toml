@@ -14,6 +14,16 @@ name              = "embassy_async"
 path              = "./src/bin/embassy_async.rs"
 required-features = ["board"]
 
+[[bin]]
+name              = "imu_blocking"
+path              = "./src/bin/imu_blocking.rs"
+required-features = ["board"]
+
+[[bin]]
+name              = "imu_embassy"
+path              = "./src/bin/imu_embassy.rs"
+required-features = ["board"]
+
 [features]
 default = ["board"]
 # Everything ESP32-S3-specific. Without it, only the pure test-card drawing
@@ -31,6 +41,7 @@ board = [
   "dep:gc9a01-rs",
   "dep:log",
   "dep:static_cell",
+  "dep:qmi8658",
 ]
 
 [dependencies]
@@ -57,6 +68,8 @@ esp-println      = { version = "0.18.0", features = ["esp32s3", "log-04"], optio
 
 critical-section = { version = "1.2.0", optional = true }
 static_cell      = { version = "2.1.1", optional = true }
+
+qmi8658 = { path = "../qmi8658", features = ["async", "log"], optional = true }
 
 [profile.dev]
 # The default debug profile is too slow and too big for resource-constrained devices.

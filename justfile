@@ -37,6 +37,15 @@ flash-blocking:
 flash-async:
     cargo run --release --bin embassy_async
 
+
+# Flash + monitor the QMI8658 blocking IMU HIL firmware.
+flash-imu-blocking:
+    cargo run --release --bin imu_blocking
+
+# Flash + monitor the QMI8658 Embassy async IMU HIL firmware.
+flash-imu-embassy:
+    cargo run --release --bin imu_embassy
+
 # Automated hardware test: blocking.
 hil-blocking:
     ESPFLASH_PORT={{port}} scripts/hil.sh blocking

@@ -906,6 +906,7 @@ dependencies = [
  "esp-rtos",
  "gc9a01-rs",
  "log",
+ "qmi8658",
  "static_cell",
 ]
 
@@ -1387,6 +1388,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "qmi8658"
+version = "0.2.0"
+dependencies = [
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "log",
 ]
 
 [[package]]
