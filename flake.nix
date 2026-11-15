@@ -61,26 +61,15 @@
             cargo = rustToolchain;
             rustc = rustToolchain;
           };
-          # Recreate the on-disk sibling layout so `path = "../gc9a01"`
-          # resolves inside the sandbox. Only the manifest is needed (see
-          # nix/gc9a01-0.5.0-Cargo.toml): with --no-default-features the
-          # gc9a01 crate is never compiled.
-          mergedSrc = pkgs.runCommand "esp32-s3-touch-lcd-1-28-src" { } ''
-            mkdir -p $out/esp32-s3-touch-lcd-1-28 $out/gc9a01/src
-            cp -r ${self}/. $out/esp32-s3-touch-lcd-1-28/
-            cp ${./nix/gc9a01-0.5.0-Cargo.toml} $out/gc9a01/Cargo.toml
-            touch $out/gc9a01/src/lib.rs
-            chmod -R u+w $out
-            # Host tests must not see the xtensa default target / runner.
-            rm -f $out/esp32-s3-touch-lcd-1-28/.cargo/config.toml
-            rm -f $out/esp32-s3-touch-lcd-1-28/rust-toolchain.toml
-          '';
         in
         rustPlatform.buildRustPackage {
           pname = "esp32-s3-touch-lcd-1-28-host-tests";
           inherit version;
-          src = mergedSrc;
-          sourceRoot = "esp32-s3-touch-lcd-1-28-src/esp32-s3-touch-lcd-1-28";
+          src = self;
+          # Host tests must not see the xtensa default target / runner.
+          postPatch = ''
+            rm -f .cargo/config.toml rust-toolchain.toml
+          '';
           cargoLock.lockFile = ./Cargo.lock;
           cargoBuildFlags = [
             "--lib"

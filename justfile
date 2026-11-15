@@ -28,9 +28,6 @@ build:
 test-host:
     PATH="{{stable_bin}}:$PATH" rustup run stable cargo test --lib --no-default-features --target {{host}}
 
-# Gate the gc9a01 driver branch itself (tests + clippy).
-check-lib:
-    cd ../gc9a01 && PATH="{{stable_bin}}:$PATH" rustup run stable cargo test --all-features && PATH="{{stable_bin}}:$PATH" rustup run stable cargo clippy --all-targets --all-features -- -D warnings
 
 # Flash + monitor the blocking firmware (interactive visual check).
 flash-blocking:

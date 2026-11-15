@@ -64,7 +64,6 @@ Host-side gates (no hardware):
 
 ```bash
 just test-host   # probe-point pixel tests of the test-card core
-just check-lib   # gc9a01 driver tests + clippy (blocking/async parity)
 nix flake check  # same host tests inside the Nix sandbox
 ```
 
@@ -83,19 +82,6 @@ nix flake check  # same host tests inside the Nix sandbox
 mode 0. Touch and IMU are **deferred** to follow-up bins; only their pin
 map is carried over so far.
 
-## gc9a01 0.5.0 is a path dependency (for now)
-
-Until 0.5.0 is published, `Cargo.toml` points at the sibling checkout:
-
-```toml
-gc9a01-rs = { path = "../gc9a01", version = "0.5.0", features = ["async", "graphics"], optional = true }
-# After 0.5.0 publishes: gc9a01-rs = { version = "0.5.0", features = ["async", "graphics"], optional = true }
-```
-
-When switching to the crates.io line, also delete
-`nix/gc9a01-0.5.0-Cargo.toml` — that stub manifest only exists so the Nix
-sandbox check can resolve the sibling path dep (it is never compiled
-there).
 
 ## License
 

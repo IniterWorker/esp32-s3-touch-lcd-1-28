@@ -38,9 +38,7 @@ embedded-graphics = "0.8"
 embedded-hal      = "1.0"
 embedded-hal-async = "1.0"
 
-# Local, unpublished 0.5.0. After 0.5.0 publishes:
-# gc9a01-rs = { version = "0.5.0", features = ["async", "graphics"], optional = true }
-gc9a01-rs = { path = "../gc9a01", version = "0.5.0", features = ["async", "graphics"], optional = true }
+gc9a01-rs = { version = "0.5.0", features = ["async", "graphics"], optional = true }
 embedded-hal-bus = { version = "0.3", features = ["async"], optional = true }
 # Versions below are copied verbatim from esp-generate 2.0.0
 # (esp32s3 + unstable-hal + embassy + log + esp-backtrace); do not hand-bump
