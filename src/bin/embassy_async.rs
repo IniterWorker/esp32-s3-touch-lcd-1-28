@@ -21,9 +21,15 @@ use embassy_time::{Delay, Duration, Instant, Timer};
 use esp_hal::{
     clock::CpuClock,
     dma_rx_buffer, dma_tx_buffer,
-    gpio::{Level, Output, OutputConfig},
-    peripherals::{DMA_CH0, GPIO2, GPIO8, GPIO9, GPIO10, GPIO11, GPIO14, SPI2},
+    gpio::{DriveMode, Level, Output, OutputConfig},
+    ledc::{
+        LSGlobalClkSource, Ledc, LowSpeed,
+        channel::{self, ChannelIFace},
+        timer::{self, TimerIFace},
+    },
+    peripherals::{DMA_CH0, GPIO2, GPIO8, GPIO9, GPIO10, GPIO11, GPIO14, LEDC, SPI2},
     spi::master::Spi,
+    time::Rate,
     timer::timg::TimerGroup,
 };
 use esp_println::println;
@@ -69,7 +75,8 @@ async fn heartbeat_task() {
 }
 
 /// The peripherals the LCD owns, bundled so the task takes one argument:
-/// SPI2, DMA channel, then SCK/MOSI/CS/DC/RST/BL pins.
+/// SPI2, DMA channel, then SCK/MOSI/CS/DC/RST/BL pins and the LEDC
+/// peripheral that PWMs the backlight.
 type LcdPeripherals = (
     SPI2<'static>,
     DMA_CH0<'static>,
@@ -79,13 +86,14 @@ type LcdPeripherals = (
     GPIO8<'static>,
     GPIO14<'static>,
     GPIO2<'static>,
+    LEDC<'static>,
 );
 
 /// Owns the SPI bus and display; runs the reference sequence (step-for-step
 /// identical to the blocking bin) forever.
 #[embassy_executor::task]
 async fn display_task(p: LcdPeripherals) {
-    let (spi2, dma, sck, mosi, cs, dc_pin, rst_pin, bl_pin) = p;
+    let (spi2, dma, sck, mosi, cs, dc_pin, rst_pin, bl_pin, ledc_periph) = p;
     let dma_rx_buf = match dma_rx_buffer!(8192) {
         Ok(buf) => buf,
         Err(e) => fail("spi", &e).await,
@@ -116,8 +124,29 @@ async fn display_task(p: LcdPeripherals) {
 
     let dc = Output::new(dc_pin, Level::Low, OutputConfig::default());
     let mut rst = Output::new(rst_pin, Level::High, OutputConfig::default());
-    // Backlight stays off until the panel is initialized (old firmware order).
-    let mut bl = Output::new(bl_pin, Level::Low, OutputConfig::default());
+    // Backlight: LEDC PWM on GPIO2, starting at 0% (off until the panel is
+    // initialized, as the old firmware did). PWM because the GC9A01's own
+    // brightness register only drives its LEDPWM pin, which is not wired to
+    // this board's backlight circuit — phase (d) sweeps both, but only the
+    // GPIO2 PWM is visible here.
+    let mut ledc = Ledc::new(ledc_periph);
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
+    let mut bl_timer = ledc.timer::<LowSpeed>(timer::Number::Timer0);
+    if let Err(e) = bl_timer.configure(timer::config::Config {
+        duty: timer::config::Duty::Duty8Bit,
+        clock_source: timer::LSClockSource::APBClk,
+        frequency: Rate::from_khz(5),
+    }) {
+        fail("basic", &e).await;
+    }
+    let mut bl = ledc.channel(channel::Number::Channel0, bl_pin);
+    if let Err(e) = bl.configure(channel::config::Config {
+        timer: &bl_timer,
+        duty_pct: 0,
+        drive_mode: DriveMode::PushPull,
+    }) {
+        fail("basic", &e).await;
+    }
 
     let iface = AsyncSpiInterface::new(spi, dc);
     let mut display = Gc9a01Async::new(iface, DisplayResolution240x240, DisplayRotation::Rotate180);
@@ -127,7 +156,9 @@ async fn display_task(p: LcdPeripherals) {
     if let Err(e) = display.init(&mut Delay).await {
         fail("basic", &e).await;
     }
-    bl.set_high();
+    if let Err(e) = bl.set_duty(100) {
+        fail("basic", &e).await;
+    }
 
     // BasicMode phase: raw checkerboard, 16px cells, written straight to
     // the panel (no framebuffer involved yet).
@@ -216,7 +247,10 @@ async fn display_task(p: LcdPeripherals) {
             fail("rotation", &e).await;
         }
 
-        // (d) Controller brightness sweep with the card on screen.
+        // (d) Brightness sweep with the card on screen. The driver's
+        // `set_brightness` is exercised (its LEDPWM output is unwired on
+        // this board, see backlight setup), and the same level is mirrored
+        // to the GPIO2 PWM duty (DBV/255) so the sweep is actually visible.
         if let Err(e) = draw_test_card(&mut display, "ASYNC") {
             fail("brightness", &e).await;
         }
@@ -232,9 +266,16 @@ async fn display_task(p: LcdPeripherals) {
             if let Err(e) = display.set_brightness(brightness).await {
                 fail("brightness", &e).await;
             }
-            Timer::after(Duration::from_millis(300)).await;
+            let duty_pct = (brightness.brightness() as u32 * 100 / 255) as u8;
+            if let Err(e) = bl.set_duty(duty_pct) {
+                fail("brightness", &e).await;
+            }
+            Timer::after(Duration::from_millis(600)).await;
         }
         if let Err(e) = display.set_brightness(Brightness::NORMAL).await {
+            fail("brightness", &e).await;
+        }
+        if let Err(e) = bl.set_duty(100) {
             fail("brightness", &e).await;
         }
         println!("GC9A01-REF mode={MODE} step=brightness-ok");
@@ -273,6 +314,7 @@ async fn main(spawner: Spawner) -> ! {
             peripherals.GPIO8,
             peripherals.GPIO14,
             peripherals.GPIO2,
+            peripherals.LEDC,
         ))
         .unwrap(),
     );

@@ -24,7 +24,7 @@ pub mod pins {
     pub const LCD_DC: u8 = 8;
     /// LCD reset.
     pub const LCD_RST: u8 = 14;
-    /// LCD backlight (plain GPIO on/off; no LEDC PWM in this reference test).
+    /// LCD backlight (LEDC PWM in the reference-test bins).
     pub const LCD_BL: u8 = 2;
     /// Shared I2C data (CST816S touch + QMI8658 IMU).
     pub const I2C_SDA: u8 = 6;

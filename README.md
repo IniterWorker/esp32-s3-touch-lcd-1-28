@@ -49,8 +49,11 @@ Both bins (`src/bin/blocking.rs`, `src/bin/embassy_async.rs`) run, in order:
 4. **Rotations** — all four `DisplayRotation`s with an up-arrow marker
    (`step=rotation value=90-ok`, ...), then back to the `Rotate180`
    default this board has always used.
-5. **Brightness** — GC9A01 controller brightness sweep, 4 steps
-   (`step=brightness-ok`).
+5. **Brightness** — 4-step sweep (`step=brightness-ok`). Each level calls
+   the driver's `set_brightness`, and mirrors it to LEDC PWM on GPIO2:
+   the GC9A01 brightness register only drives the controller's LEDPWM pin,
+   which is not wired to this board's backlight circuit, so the register
+   alone has no visible effect here (verified on hardware).
 
 Then `cycle=<n> result=ALL-PASS`, and the loop repeats. The async bin adds
 a 1 s `step=heartbeat` task: heartbeats must interleave with the flush
