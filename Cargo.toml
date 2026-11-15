@@ -115,6 +115,10 @@ static_cell      = { version = "2.1.1", optional = true }
 qmi8658 = { version = "0.2.0", features = ["async", "log"], optional = true }
 cst816s-rs = { version = "0.2.0", features = ["async"], optional = true }
 
+[dev-dependencies]
+# Host-only: examples/render_pages.rs screenshots for the README.
+png = "0.17"
+
 [profile.dev]
 # The default debug profile is too slow and too big for resource-constrained devices.
 # Always build with some optimizations enabled.

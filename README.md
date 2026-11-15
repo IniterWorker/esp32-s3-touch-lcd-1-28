@@ -1,6 +1,11 @@
 # ESP32-S3-TOUCH-LCD-1.28 — full board support + SBX sandbox
 
-<img src="./images/picture.jpg" width="200" alt="ESP32-S3-TOUCH-LCD-1.28" align="center">
+<img src="./images/sandbox-pages.png" width="720" alt="SBX sandbox pages: status, IMU live, compass, gestures, display, features">
+
+*The six sandbox pages, rendered off-device with the firmware's own
+UI code (`just screenshots`; canned telemetry). Individual pages in
+[`images/sandbox/`](images/sandbox). Hardware:
+<img src="./images/picture.jpg" width="120" alt="ESP32-S3-TOUCH-LCD-1.28 board">*
 
 Bare-metal (`no_std`) [esp-hal](https://github.com/esp-rs/esp-hal) +
 [Embassy](https://embassy.dev) support for the

@@ -30,6 +30,10 @@ test-host:
     PATH="{{stable_bin}}:$PATH" rustup run stable cargo test --lib --no-default-features --features ui --target {{host}}
 
 
+
+# Render sandbox page screenshots (host, off-device) into images/.
+screenshots:
+    PATH="{{stable_bin}}:$PATH" rustup run stable cargo run --release --example render_pages --no-default-features --features ui --target {{host}}
 # Flash + monitor the blocking firmware (interactive visual check).
 flash-blocking:
     cargo run --release --bin blocking

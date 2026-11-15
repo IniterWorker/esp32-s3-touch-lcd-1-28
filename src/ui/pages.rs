@@ -340,8 +340,8 @@ fn build_features(state: &AppState, actions: &Actions) -> (WidgetNode, Handles) 
             v,
         ));
     }
-    line_label(&mut kids, &mut handles.system_lines, "-", 176, DIM);
-    line_label(&mut kids, &mut handles.system_lines, "-", 188, DIM);
+    line_label(&mut kids, &mut handles.system_lines, "-", 172, DIM);
+    line_label(&mut kids, &mut handles.system_lines, "-", 183, DIM);
     (bg_root(kids), handles)
 }
 
@@ -517,7 +517,7 @@ pub fn refresh(handles: &Handles, state: &AppState, frame: u32) {
             &handles.system_lines,
             0,
             format!(
-                "touch p{} imu r{:02x} seq {}",
+                "p{} r{:02x} seq {}",
                 state.touch_id, state.imu_rev, state.settings_seq
             ),
         );
@@ -647,11 +647,12 @@ fn draw_compass(cv: &mut CanvasWidget, state: &AppState) {
     cv.fill(BG);
     let c = 54;
     let r = 48;
-    // Dial ring + cardinal ticks.
+    // Dial ring (segments between circle points) + cardinal ticks.
     for (i, (s, co)) in CIRCLE16.iter().enumerate() {
         let x = c + s * r / 256;
         let y = c - co * r / 256;
-        cv.draw_pixel(x, y, DIM);
+        let (s2, co2) = CIRCLE16[(i + 1) % 16];
+        cv.draw_line(x, y, c + s2 * r / 256, c - co2 * r / 256, DIM);
         if i % 4 == 0 {
             let x2 = c + s * (r - 6) / 256;
             let y2 = c - co * (r - 6) / 256;
