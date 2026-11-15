@@ -19,8 +19,7 @@ use std::path::Path;
 use esp32_s3_touch_lcd_1_28::settings::Settings;
 use esp32_s3_touch_lcd_1_28::ui::{
     display_backend::framebuffer_surface,
-    new_actions,
-    pages,
+    new_actions, pages,
     state::{AppState, ImuSample, PAGE_COUNT},
 };
 use rlvgl_platform::CpuBlitter;
@@ -28,7 +27,9 @@ use rlvgl_platform::blit::BlitterRenderer;
 
 const W: usize = 240;
 const OUT_DIR: &str = "images/sandbox";
-const NAMES: [&str; 6] = ["status", "imu", "compass", "gestures", "display", "features"];
+const NAMES: [&str; 6] = [
+    "status", "imu", "compass", "gestures", "display", "features",
+];
 
 fn canned_state() -> AppState {
     let settings = Settings {
@@ -151,5 +152,10 @@ fn main() {
             mont[dst..dst + W * 4].copy_from_slice(&img[src..src + W * 4]);
         }
     }
-    write_png(Path::new("images/sandbox-pages.png"), &mont, mw as u32, mh as u32);
+    write_png(
+        Path::new("images/sandbox-pages.png"),
+        &mont,
+        mw as u32,
+        mh as u32,
+    );
 }
