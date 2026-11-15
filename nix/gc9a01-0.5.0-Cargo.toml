@@ -1,0 +1,26 @@
+# Manifest stub of gc9a01-rs 0.5.0 (../gc9a01/Cargo.toml), used only by the
+# Nix sandbox host-test check: the board's `path = "../gc9a01"` dependency
+# must resolve against Cargo.lock there, but with `--no-default-features`
+# the crate is never compiled. Keep [dependencies] and [features] in sync
+# with the real manifest; delete this file when 0.5.0 is on crates.io.
+[package]
+name = "gc9a01-rs"
+version = "0.5.0"
+edition = "2021"
+rust-version = "1.75"
+
+[dependencies]
+embedded-hal = { version = "1.0.0" }
+embedded-hal-async = { version = "1.0", optional = true }
+embedded-graphics-core = { version = "0.4.1", optional = true }
+display-interface = "0.5.0"
+display-interface-spi = "0.5.0"
+
+[features]
+default = ["graphics"]
+graphics = ["embedded-graphics-core"]
+async = ["dep:embedded-hal-async"]
+
+[lib]
+name = "gc9a01"
+path = "src/lib.rs"

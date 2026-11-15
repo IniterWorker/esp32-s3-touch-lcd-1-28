@@ -7,34 +7,20 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  CARGO_TERM_COLOR: always
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+# CI runs the only hardware-free gate: the Nix sandbox host tests of the
+# pure test-card core (nix flake check). Firmware builds need the impure
+# Xtensa `esp` toolchain and the real panel; they are devShell/HIL gates
+# (`just build`, `just hil`), not CI jobs.
 jobs:
-  rust-checks:
-    name: Rust Checks
+  nix-check:
+    name: Nix flake check + fmt
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        action:
-          - command: build
-            args: --release
-          - command: fmt
-            args: --all -- --check --color always
-          - command: clippy
-            args: --all-targets --all-features --workspace -- -D warnings
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Setup Rust
-        uses: esp-rs/xtensa-toolchain@v1.5
-        with:
-          default: true
-          buildtargets: esp32s3
-          ldproxy: true
-      - name: Enable caching
-        uses: Swatinem/rust-cache@v2
-      - name: Run command
-        run: cargo ${{ matrix.action.command }} ${{ matrix.action.args }}
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Flake check (host lib tests)
+        run: nix flake check
+      - name: Format check
+        run: nix develop -c cargo fmt --all -- --check

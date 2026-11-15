@@ -1,85 +1,72 @@
 [package]
-name = "esp32-s3-touch-lcd-1-28"
-version = "0.1.0"
-authors = ["Walter Bonetti <walter.bonetti@epitech.eu>"]
-edition = "2021"
-resolver = "2"
-rust-version = "1.71"
+edition      = "2024"
+name         = "esp32-s3-touch-lcd-1-28"
+rust-version = "1.95"
+version      = "0.1.0"
 
-[profile.release]
-opt-level = "s"
+[[bin]]
+name              = "blocking"
+path              = "./src/bin/blocking.rs"
+required-features = ["board"]
 
-[profile.dev]
-debug = true    # Symbols are nice and they don't increase the size on Flash
-opt-level = "z"
+[[bin]]
+name              = "embassy_async"
+path              = "./src/bin/embassy_async.rs"
+required-features = ["board"]
 
 [features]
-default = ["std", "embassy", "esp-idf-svc/native"]
-
-pio = ["esp-idf-svc/pio"]
-std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
-alloc = ["esp-idf-svc/alloc"]
-nightly = ["esp-idf-svc/nightly"]
-experimental = ["esp-idf-svc/experimental"]
-embassy = [
-    "esp-idf-svc/embassy-sync",
-    "esp-idf-svc/critical-section",
-    "esp-idf-svc/embassy-time-driver",
+default = ["board"]
+# Everything ESP32-S3-specific. Without it, only the pure test-card drawing
+# core builds (and its host tests run): `cargo test --lib --no-default-features`.
+board = [
+  "dep:critical-section",
+  "dep:embassy-executor",
+  "dep:embassy-time",
+  "dep:embedded-hal-bus",
+  "dep:esp-backtrace",
+  "dep:esp-bootloader-esp-idf",
+  "dep:esp-hal",
+  "dep:esp-println",
+  "dep:esp-rtos",
+  "dep:gc9a01-rs",
+  "dep:log",
+  "dep:static_cell",
 ]
 
 [dependencies]
-log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.49", default-features = false }
-embedded-graphics = "0.8.1"
-anyhow = "1.0.82"
-esp-idf-hal = { version = "0.44.1" }
+embedded-graphics = "0.8"
+embedded-hal      = "1.0"
+embedded-hal-async = "1.0"
 
-# Drivers
-gc9a01-rs = { version = "0.3.1" }
+# Local, unpublished 0.5.0. After 0.5.0 publishes:
+# gc9a01-rs = { version = "0.5.0", features = ["async", "graphics"], optional = true }
+gc9a01-rs = { path = "../gc9a01", version = "0.5.0", features = ["async", "graphics"], optional = true }
+embedded-hal-bus = { version = "0.3", features = ["async"], optional = true }
+# Versions below are copied verbatim from esp-generate 2.0.0
+# (esp32s3 + unstable-hal + embassy + log + esp-backtrace); do not hand-bump
+# individual crates — regenerate and re-copy as a set.
+esp-hal = { version = "~1.2.2", features = ["esp32s3", "log-04", "unstable"], optional = true }
 
-# Both qmi8658 and cst816s-rs are work-in-progress
-qmi8658 = { git = "https://github.com/IniterWorker/qmi8658", rev = "a5d47c98bc84213baba3edea1199814e2c1cbec6", features = [
-    "loglib",
-] }
-cst816s-rs = { git = "https://github.com/IniterWorker/cst816s", rev = "966a0761f992c63ea1a953ba3d4a3fab8de15db0", features = [
-    "loglib",
-    "std",
-] }
+esp-rtos = { version = "0.4.0", features = ["embassy", "esp32s3", "log-04"], optional = true }
 
-# gc9a01-rs = { path = "../gc9a01" }
-# qmi8658 = { path = "../qmi8658", features = ["loglib"] }
-# cst816s-rs = { path = "../cst816s", features = ["loglib", "std"] }
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32s3", "log-04"], optional = true }
+log                    = { version = "0.4.27", optional = true }
 
+embassy-executor = { version = "0.10.0", features = ["log"], optional = true }
+embassy-time     = { version = "0.5.0", features = ["log"], optional = true }
+esp-backtrace    = { version = "0.20.0", features = ["esp32s3", "panic-handler", "println"], optional = true }
+esp-println      = { version = "0.18.0", features = ["esp32s3", "log-04"], optional = true }
 
-# Helpers
+critical-section = { version = "1.2.0", optional = true }
+static_cell      = { version = "2.1.1", optional = true }
 
-# Fork support embedded-hal 1.0.0
-shared-bus = { git = "https://github.com/Sycrosity/shared-bus.git", version = "0.4.0", features = [
-    "std",
-] }
+[profile.dev]
+# The default debug profile is too slow and too big for resource-constrained devices.
+# Always build with some optimizations enabled.
+opt-level = "s"
 
-# LVGL
-cstr_core = "0.2.1"
-lvgl = { version = "0.6.2", default-features = false, features = [
-    "embedded_graphics",
-    "unsafe_no_autoinit",
-] }
-lvgl-sys = { version = "0.6.2" }
-
-[[bin]]
-name = "esp32-s3-touch-lcd-1-28"
-harness = false                  # do not use the built in cargo test harneess -> resolve rust-analyzer errors
-
-[build-dependencies]
-embuild = "0.32.0"
-build-data = "0"
-anyhow = "1"
-
-[dev-dependencies.cargo-husky]
-version = "1"
-features = ["user-hooks"]
-
-# Fork support esp32 lvgl
-[patch.crates-io]
-lvgl = { git = "https://github.com/enelson1001/lv_binding_rust" }
-lvgl-sys = { git = "https://github.com/enelson1001/lv_binding_rust" }
+[profile.release]
+codegen-units = 1 # LLVM can perform better optimizations using a single thread
+debug         = 2 # prefer slower builds but better debugging experience
+lto           = 'fat'
+opt-level     = 's'
