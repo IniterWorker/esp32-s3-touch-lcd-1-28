@@ -11,7 +11,15 @@
 
 #![no_std]
 
+#[cfg(feature = "ui")]
+extern crate alloc;
+
+pub mod battery;
+pub mod settings;
 pub mod test_card;
 
 #[cfg(feature = "board")]
 pub mod board;
+
+#[cfg(feature = "ui")]
+pub mod ui;

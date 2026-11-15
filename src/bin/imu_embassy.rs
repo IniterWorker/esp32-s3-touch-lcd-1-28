@@ -20,11 +20,11 @@ use embassy_time::{Delay, Duration, Timer, with_timeout};
 use esp_hal::{
     clock::CpuClock,
     gpio::{Input, InputConfig, Pull},
-    i2c::master::{Config as I2cConfig, I2c},
-    time::Rate,
+    i2c::master::I2c,
     timer::timg::TimerGroup,
 };
 use esp_println::println;
+use esp32_s3_touch_lcd_1_28::board;
 use qmi8658::{
     DeviceAddress, Qmi8658Async,
     config::{Config, InterruptConfig, MotionConfig, MotionEngines, TapConfig},
@@ -60,14 +60,11 @@ async fn main(_spawner: Spawner) -> ! {
     println!("QMI8658-HIL mode={MODE} step=boot");
 
     // Shared I2C bus (CST816S touch + QMI8658): SDA=GPIO6, SCL=GPIO7.
-    let i2c = I2c::new(
-        peripherals.I2C0,
-        I2cConfig::default().with_frequency(Rate::from_khz(400)),
-    )
-    .unwrap_or_else(|e| fail("i2c", &e))
-    .with_sda(peripherals.GPIO6)
-    .with_scl(peripherals.GPIO7)
-    .into_async();
+    let i2c = I2c::new(peripherals.I2C0, board::i2c_config())
+        .unwrap_or_else(|e| fail("i2c", &e))
+        .with_sda(peripherals.GPIO6)
+        .with_scl(peripherals.GPIO7)
+        .into_async();
 
     // IMU INT1 on GPIO4; the sensor drives it push-pull (idle low).
     let mut int1 = Input::new(
@@ -116,6 +113,10 @@ async fn main(_spawner: Spawner) -> ! {
     println!("QMI8658-HIL mode={MODE} step=ready note=tap-or-shake-board");
 
     let mut i: u32 = 0;
+    // HIL gravity check: average the first 10 samples, verdict once.
+    let mut acc_sum = [0f32; 3];
+    let mut acc_n = 0f32;
+    let mut gravity_done = false;
     loop {
         // Wait for an INT1 rising edge, but at most 500 ms so samples
         // keep flowing on a steady cadence.
@@ -151,11 +152,37 @@ async fn main(_spawner: Spawner) -> ! {
         }
 
         match imu.read_sample().await {
-            Ok(s) => println!(
-                "QMI8658-HIL mode={MODE} step=sample i={i} accel_g=[{:.3},{:.3},{:.3}] gyro_dps=[{:.2},{:.2},{:.2}] temp_c={:.1}",
-                s.accel_g[0], s.accel_g[1], s.accel_g[2], s.gyro_dps[0], s.gyro_dps[1],
-                s.gyro_dps[2], s.temperature_c,
-            ),
+            Ok(s) => {
+                if !gravity_done {
+                    acc_sum[0] += s.accel_g[0];
+                    acc_sum[1] += s.accel_g[1];
+                    acc_sum[2] += s.accel_g[2];
+                    acc_n += 1.0;
+                    if acc_n >= 10.0 {
+                        gravity_done = true;
+                        let (x, y, z) =
+                            (acc_sum[0] / acc_n, acc_sum[1] / acc_n, acc_sum[2] / acc_n);
+                        // Squared magnitude vs [0.8^2, 1.2^2]: no sqrt
+                        // in core-only build.
+                        let mag2 = x * x + y * y + z * z;
+                        if (0.64..=1.44).contains(&mag2) {
+                            println!("QMI8658-HIL mode={MODE} step=gravity-ok mag2={mag2:.3}");
+                        } else {
+                            println!("QMI8658-HIL mode={MODE} step=gravity-suspect mag2={mag2:.3}");
+                        }
+                    }
+                }
+                println!(
+                    "QMI8658-HIL mode={MODE} step=sample i={i} accel_g=[{:.3},{:.3},{:.3}] gyro_dps=[{:.2},{:.2},{:.2}] temp_c={:.1}",
+                    s.accel_g[0],
+                    s.accel_g[1],
+                    s.accel_g[2],
+                    s.gyro_dps[0],
+                    s.gyro_dps[1],
+                    s.gyro_dps[2],
+                    s.temperature_c,
+                )
+            }
             Err(e) => println!("QMI8658-HIL mode={MODE} step=sample i={i} err={e:?}"),
         }
         i = i.wrapping_add(1);

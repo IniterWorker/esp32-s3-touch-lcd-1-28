@@ -15,10 +15,9 @@
 #![deny(clippy::large_stack_frames)]
 
 use embedded_hal::delay::DelayNs;
-use esp_hal::{
-    clock::CpuClock, delay::Delay, i2c::master::{Config as I2cConfig, I2c}, time::Rate,
-};
+use esp_hal::{clock::CpuClock, delay::Delay, i2c::master::I2c};
 use esp_println::println;
+use esp32_s3_touch_lcd_1_28::board;
 use qmi8658::{
     DeviceAddress, Qmi8658,
     config::{Config, FifoConfig, PedometerConfig},
@@ -52,13 +51,10 @@ fn main() -> ! {
     println!("QMI8658-HIL mode={MODE} step=boot");
 
     // Shared I2C bus (CST816S touch + QMI8658): SDA=GPIO6, SCL=GPIO7.
-    let i2c = I2c::new(
-        peripherals.I2C0,
-        I2cConfig::default().with_frequency(Rate::from_khz(400)),
-    )
-    .unwrap_or_else(|e| fail("i2c", &e))
-    .with_sda(peripherals.GPIO6)
-    .with_scl(peripherals.GPIO7);
+    let i2c = I2c::new(peripherals.I2C0, board::i2c_config())
+        .unwrap_or_else(|e| fail("i2c", &e))
+        .with_sda(peripherals.GPIO6)
+        .with_scl(peripherals.GPIO7);
 
     // This board's QMI8658 sits at the secondary address (SA0 low), as
     // in the pre-rewrite firmware (`new_secondary_address`).
@@ -83,22 +79,41 @@ fn main() -> ! {
 
     // Phase 1: 10 Hz samples for ~2 s. Board flat and still expect
     // |accel| ~1 g, gyro within a few dps, temperature 15-40 °C.
+    // The averaged magnitude feeds the HIL-assertable gravity check.
+    let mut acc_sum = [0f32; 3];
+    let mut acc_n = 0f32;
     for i in 0..20 {
         match imu.read_sample() {
-            Ok(s) => println!(
-                "QMI8658-HIL mode={MODE} step=sample i={i} ts={} accel_g=[{:.3},{:.3},{:.3}] gyro_dps=[{:.2},{:.2},{:.2}] temp_c={:.1}",
-                s.timestamp,
-                s.accel_g[0],
-                s.accel_g[1],
-                s.accel_g[2],
-                s.gyro_dps[0],
-                s.gyro_dps[1],
-                s.gyro_dps[2],
-                s.temperature_c,
-            ),
+            Ok(s) => {
+                acc_sum[0] += s.accel_g[0];
+                acc_sum[1] += s.accel_g[1];
+                acc_sum[2] += s.accel_g[2];
+                acc_n += 1.0;
+                println!(
+                    "QMI8658-HIL mode={MODE} step=sample i={i} ts={} accel_g=[{:.3},{:.3},{:.3}] gyro_dps=[{:.2},{:.2},{:.2}] temp_c={:.1}",
+                    s.timestamp,
+                    s.accel_g[0],
+                    s.accel_g[1],
+                    s.accel_g[2],
+                    s.gyro_dps[0],
+                    s.gyro_dps[1],
+                    s.gyro_dps[2],
+                    s.temperature_c,
+                )
+            }
             Err(e) => println!("QMI8658-HIL mode={MODE} step=sample i={i} err={e:?}"),
         }
         delay.delay_ms(100);
+    }
+    if acc_n > 0.0 {
+        let (x, y, z) = (acc_sum[0] / acc_n, acc_sum[1] / acc_n, acc_sum[2] / acc_n);
+        // Squared magnitude vs [0.8^2, 1.2^2]: no sqrt in core-only build.
+        let mag2 = x * x + y * y + z * z;
+        if (0.64..=1.44).contains(&mag2) {
+            println!("QMI8658-HIL mode={MODE} step=gravity-ok mag2={mag2:.3}");
+        } else {
+            println!("QMI8658-HIL mode={MODE} step=gravity-suspect mag2={mag2:.3}");
+        }
     }
 
     // Phase 2: self-tests (datasheet thresholds: accel >200 mg, gyro >300 dps).
@@ -147,10 +162,7 @@ fn main() -> ! {
     println!("QMI8658-HIL mode={MODE} step=cod-start note=keep-board-still");
     match imu.calibrate_gyro_on_demand() {
         Ok(gains) => {
-            println!(
-                "QMI8658-HIL mode={MODE} step=cod-ok gains={:02x?}",
-                gains.0
-            );
+            println!("QMI8658-HIL mode={MODE} step=cod-ok gains={:02x?}", gains.0);
             match imu.apply_gyro_gains(&gains) {
                 Ok(()) => println!("QMI8658-HIL mode={MODE} step=cod-apply-gains ok=1"),
                 Err(e) => println!("QMI8658-HIL mode={MODE} step=cod-apply-gains err={e:?}"),
@@ -158,9 +170,7 @@ fn main() -> ! {
         }
         Err(e) => {
             let status = imu.cod_status().map(|s| s.to_bits()).unwrap_or(0xFF);
-            println!(
-                "QMI8658-HIL mode={MODE} step=cod-fail err={e:?} cod_status=0x{status:02x}"
-            );
+            println!("QMI8658-HIL mode={MODE} step=cod-fail err={e:?} cod_status=0x{status:02x}");
         }
     }
     imu.apply_config(Config::default())
@@ -185,8 +195,13 @@ fn main() -> ! {
         match imu.read_sample() {
             Ok(s) => println!(
                 "QMI8658-HIL mode={MODE} step=sample accel_g=[{:.3},{:.3},{:.3}] gyro_dps=[{:.2},{:.2},{:.2}] temp_c={:.1}",
-                s.accel_g[0], s.accel_g[1], s.accel_g[2], s.gyro_dps[0], s.gyro_dps[1],
-                s.gyro_dps[2], s.temperature_c,
+                s.accel_g[0],
+                s.accel_g[1],
+                s.accel_g[2],
+                s.gyro_dps[0],
+                s.gyro_dps[1],
+                s.gyro_dps[2],
+                s.temperature_c,
             ),
             Err(e) => println!("QMI8658-HIL mode={MODE} step=sample err={e:?}"),
         }

@@ -14,13 +14,14 @@ set -euo pipefail
 # this single constant if that ever stops being true.
 CAPTURE_S=30
 
-BIN="${1:?usage: hil.sh <blocking|embassy_async>}"
+BIN="${1:?usage: hil.sh <blocking|embassy_async|flash_store>}"
 PORT="${ESPFLASH_PORT:-/dev/ttyACM1}"
 ELF="target/xtensa-esp32s3-none-elf/release/${BIN}"
 LOG="target/hil-${BIN}.log"
 
 case "$BIN" in
 blocking) MODE="blocking" ;;
+flash_store) MODE="flash"; CAPTURE_S=15 ;;
 embassy_async) MODE="async" ;;
 *)
     echo "hil.sh: unknown bin '$BIN'" >&2
@@ -42,10 +43,21 @@ echo "HIL ${BIN}: building (port ${PORT})"
 cargo build --release --bin "$BIN"
 
 echo "HIL ${BIN}: flashing ${ELF}"
-espflash flash --port "$PORT" --chip esp32s3 "$ELF"
+espflash flash --port "$PORT" --chip esp32s3 --partition-table partitions.csv "$ELF"
 
 echo "HIL ${BIN}: capturing ${CAPTURE_S}s of UART -> ${LOG}"
 timeout "$CAPTURE_S" espflash monitor --non-interactive --port "$PORT" --chip esp32s3 --elf "$ELF" >"$LOG" 2>&1 || true
+
+if [ "$BIN" = "flash_store" ]; then
+    grep -q "FLASH-REF step=probe-ok" "$LOG" || fail "no probe-ok marker"
+    grep -qE "FLASH-REF step=write-read-ok seq=[0-9]+" "$LOG" || fail "no write-read-ok marker"
+    if grep -qE 'FAIL|panicked' "$LOG"; then
+        fail "FAIL/panicked present in log"
+    fi
+    echo "HIL ${BIN}: PASS"
+    grep -E 'FLASH-REF' "$LOG" | head -n 6 || true
+    exit 0
+fi
 
 grep -q "mode=${MODE} step=boot" "$LOG" || fail "no boot marker"
 grep -q "step=basic-ok" "$LOG" || fail "BasicMode phase marker missing"

@@ -117,6 +117,8 @@
               pkgs.pkg-config
               pkgs.libudev-zero
               pkgs.nixfmt
+              pkgs.python3
+              pkgs.python3Packages.pyserial
             ];
             env.ESPFLASH_PORT = "/dev/ttyACM1";
             shellHook = ''

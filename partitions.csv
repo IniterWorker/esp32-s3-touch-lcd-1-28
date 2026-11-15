@@ -1,0 +1,8 @@
+# ESP-IDF partition table for the 16 MB flash (W25Q128).
+# Bootloader (0x0) and partition table (0x8000) are espflash/bootloader
+# managed. `settings` holds the two-slot sandbox settings store
+# (src/settings.rs); `factory` gets everything else so every bin,
+# including the sandbox with PSRAM/heap, fits without repartitioning.
+# Name,   Type, SubType, Offset,  Size
+settings, data, 0x06,    0x9000,  0x10000
+factory,  app,  factory, 0x20000, 0xFE0000

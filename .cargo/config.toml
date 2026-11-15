@@ -2,7 +2,7 @@
 include = ["esp-config.toml"]
 
 [target.xtensa-esp32s3-none-elf]
-runner = "espflash flash --monitor --chip esp32s3"
+runner = "espflash flash --monitor --chip esp32s3 --partition-table partitions.csv"
 # Scoped to the xtensa target (template puts this under [build]): the host
 # lib tests must not inherit -nostartfiles.
 rustflags = [
@@ -13,4 +13,4 @@ rustflags = [
 target = "xtensa-esp32s3-none-elf"
 
 [unstable]
-build-std = ["core"]
+build-std = ["core", "alloc"]

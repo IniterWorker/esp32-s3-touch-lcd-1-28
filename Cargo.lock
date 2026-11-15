@@ -68,6 +68,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitflags"
+version = "2.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -176,6 +182,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
 dependencies = [
  "hybrid-array",
+]
+
+[[package]]
+name = "cst816s-rs"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3933514216783e774260313020aa572b37cbe61ec166b1505226db0273edee07"
+dependencies = [
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
 ]
 
 [[package]]
@@ -893,20 +909,29 @@ name = "esp32-s3-touch-lcd-1-28"
 version = "0.1.0"
 dependencies = [
  "critical-section",
+ "cst816s-rs",
  "embassy-executor",
+ "embassy-futures",
+ "embassy-sync 0.8.0",
  "embassy-time",
  "embedded-graphics",
  "embedded-hal 1.0.0",
  "embedded-hal-async",
  "embedded-hal-bus",
+ "esp-alloc",
  "esp-backtrace",
  "esp-bootloader-esp-idf",
  "esp-hal",
  "esp-println",
  "esp-rtos",
+ "esp-storage",
  "gc9a01-rs",
  "log",
+ "nb 1.1.0",
  "qmi8658",
+ "rlvgl-core",
+ "rlvgl-platform",
+ "rlvgl-widgets",
  "static_cell",
 ]
 
@@ -1246,6 +1271,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
+name = "libm"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
+
+[[package]]
 name = "linked_list_allocator"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1393,6 +1424,8 @@ dependencies = [
 [[package]]
 name = "qmi8658"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b1fb32cb53d58b4756a58c4dfe5c2963cd89d0c0ccc1cfd97ee06ebd0e47886"
 dependencies = [
  "embedded-hal 1.0.0",
  "embedded-hal-async",
@@ -1512,6 +1545,54 @@ dependencies = [
  "const-default",
  "libc",
  "rustversion",
+]
+
+[[package]]
+name = "rlvgl-api"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36701bcd213822382a27bcc7adbe723d5ee9fcf3c75d911361db796e3b6bb8c7"
+
+[[package]]
+name = "rlvgl-audio-meters-core"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de588434d76f375ffe3049307f08de5287573bb359679a8d60e8d95adc3258c2"
+dependencies = [
+ "libm",
+]
+
+[[package]]
+name = "rlvgl-core"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66e9e9f8743b347d936afca87091640215f0e01c2d84b2b2fcbb4cdd2561ef39"
+dependencies = [
+ "rlvgl-api",
+]
+
+[[package]]
+name = "rlvgl-platform"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5546890c68ce43b1b2c239b63511110fedc4e16e72d4e5fd2f0ff491a55dec7c"
+dependencies = [
+ "bitflags",
+ "heapless 0.8.0",
+ "portable-atomic",
+ "rlvgl-core",
+]
+
+[[package]]
+name = "rlvgl-widgets"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b938098122edf9dd47e4bbced83a8f1ac8211750912a2a1f581f882693e3cde4"
+dependencies = [
+ "libm",
+ "rlvgl-audio-meters-core",
+ "rlvgl-core",
+ "rlvgl-platform",
 ]
 
 [[package]]

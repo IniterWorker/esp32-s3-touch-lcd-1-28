@@ -24,6 +24,31 @@ name              = "imu_embassy"
 path              = "./src/bin/imu_embassy.rs"
 required-features = ["board"]
 
+[[bin]]
+name              = "touch_blocking"
+path              = "./src/bin/touch_blocking.rs"
+required-features = ["board"]
+
+[[bin]]
+name              = "touch_async"
+path              = "./src/bin/touch_async.rs"
+required-features = ["board"]
+
+[[bin]]
+name              = "flash_store"
+path              = "./src/bin/flash_store.rs"
+required-features = ["board"]
+
+[[bin]]
+name              = "battery"
+path              = "./src/bin/battery.rs"
+required-features = ["board"]
+
+[[bin]]
+name              = "sandbox"
+path              = "./src/bin/sandbox.rs"
+required-features = ["sandbox"]
+
 [features]
 default = ["board"]
 # Everything ESP32-S3-specific. Without it, only the pure test-card drawing
@@ -31,6 +56,8 @@ default = ["board"]
 board = [
   "dep:critical-section",
   "dep:embassy-executor",
+  "dep:embassy-futures",
+  "dep:embassy-sync",
   "dep:embassy-time",
   "dep:embedded-hal-bus",
   "dep:esp-backtrace",
@@ -38,11 +65,19 @@ board = [
   "dep:esp-hal",
   "dep:esp-println",
   "dep:esp-rtos",
+  "dep:esp-storage",
   "dep:gc9a01-rs",
   "dep:log",
+  "dep:nb",
   "dep:static_cell",
   "dep:qmi8658",
+  "dep:cst816s-rs",
 ]
+# rlvgl UI (host-buildable: no ESP deps; host tests render pages
+# off-screen). Brings in `alloc`.
+ui = ["dep:rlvgl-core", "dep:rlvgl-widgets", "dep:rlvgl-platform", "dep:static_cell"]
+# The full sandbox application bin.
+sandbox = ["board", "ui", "dep:esp-alloc"]
 
 [dependencies]
 embedded-graphics = "0.8"
@@ -62,14 +97,23 @@ esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32s3", "log-04"], 
 log                    = { version = "0.4.27", optional = true }
 
 embassy-executor = { version = "0.10.0", features = ["log"], optional = true }
+embassy-futures  = { version = "0.1", optional = true }
+embassy-sync     = { version = "0.8", optional = true }
 embassy-time     = { version = "0.5.0", features = ["log"], optional = true }
 esp-backtrace    = { version = "0.20.0", features = ["esp32s3", "panic-handler", "println"], optional = true }
+esp-storage      = { version = "0.10", features = ["esp32s3"], optional = true }
 esp-println      = { version = "0.18.0", features = ["esp32s3", "log-04"], optional = true }
+nb               = { version = "1", optional = true }
+esp-alloc        = { version = "0.11", features = ["esp32s3"], optional = true }
+rlvgl-core       = { version = "0.2.8", default-features = false, optional = true }
+rlvgl-widgets    = { version = "0.2.6", default-features = false, optional = true }
+rlvgl-platform   = { version = "0.2.6", default-features = false, optional = true }
 
 critical-section = { version = "1.2.0", optional = true }
 static_cell      = { version = "2.1.1", optional = true }
 
-qmi8658 = { path = "../qmi8658", features = ["async", "log"], optional = true }
+qmi8658 = { version = "0.2.0", features = ["async", "log"], optional = true }
+cst816s-rs = { version = "0.2.0", features = ["async"], optional = true }
 
 [profile.dev]
 # The default debug profile is too slow and too big for resource-constrained devices.

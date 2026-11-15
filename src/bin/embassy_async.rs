@@ -21,15 +21,10 @@ use embassy_time::{Delay, Duration, Instant, Timer};
 use esp_hal::{
     clock::CpuClock,
     dma_rx_buffer, dma_tx_buffer,
-    gpio::{DriveMode, Level, Output, OutputConfig},
-    ledc::{
-        LSGlobalClkSource, Ledc, LowSpeed,
-        channel::{self, ChannelIFace},
-        timer::{self, TimerIFace},
-    },
+    gpio::{Level, Output, OutputConfig},
+    ledc::channel::ChannelIFace,
     peripherals::{DMA_CH0, GPIO2, GPIO8, GPIO9, GPIO10, GPIO11, GPIO14, LEDC, SPI2},
     spi::master::Spi,
-    time::Rate,
     timer::timg::TimerGroup,
 };
 use esp_println::println;
@@ -124,29 +119,12 @@ async fn display_task(p: LcdPeripherals) {
 
     let dc = Output::new(dc_pin, Level::Low, OutputConfig::default());
     let mut rst = Output::new(rst_pin, Level::High, OutputConfig::default());
-    // Backlight: LEDC PWM on GPIO2, starting at 0% (off until the panel is
-    // initialized, as the old firmware did). PWM because the GC9A01's own
-    // brightness register only drives its LEDPWM pin, which is not wired to
-    // this board's backlight circuit — phase (d) sweeps both, but only the
-    // GPIO2 PWM is visible here.
-    let mut ledc = Ledc::new(ledc_periph);
-    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
-    let mut bl_timer = ledc.timer::<LowSpeed>(timer::Number::Timer0);
-    if let Err(e) = bl_timer.configure(timer::config::Config {
-        duty: timer::config::Duty::Duty8Bit,
-        clock_source: timer::LSClockSource::APBClk,
-        frequency: Rate::from_khz(5),
-    }) {
-        fail("basic", &e).await;
-    }
-    let mut bl = ledc.channel(channel::Number::Channel0, bl_pin);
-    if let Err(e) = bl.configure(channel::config::Config {
-        timer: &bl_timer,
-        duty_pct: 0,
-        drive_mode: DriveMode::PushPull,
-    }) {
-        fail("basic", &e).await;
-    }
+    // Backlight: LEDC PWM on GPIO2 at 0% until the panel is inited
+    // (see board::backlight_pwm for why PWM, not the GC9A01 register).
+    let bl = match board::backlight_pwm(ledc_periph, bl_pin) {
+        Ok(v) => v,
+        Err(e) => fail("basic", &e).await,
+    };
 
     let iface = AsyncSpiInterface::new(spi, dc);
     let mut display = Gc9a01Async::new(iface, DisplayResolution240x240, DisplayRotation::Rotate180);
