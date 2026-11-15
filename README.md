@@ -4,8 +4,7 @@
 
 *The six sandbox pages, rendered off-device with the firmware's own
 UI code (`just screenshots`; canned telemetry). Individual pages in
-[`images/sandbox/`](images/sandbox). Hardware:
-<img src="./images/picture.jpg" width="120" alt="ESP32-S3-TOUCH-LCD-1.28 board">*
+[`images/sandbox/`](images/sandbox).*
 
 Bare-metal (`no_std`) [esp-hal](https://github.com/esp-rs/esp-hal) +
 [Embassy](https://embassy.dev) support for the
@@ -15,9 +14,6 @@ path and a reference-test bin, and the **SBX sandbox** ties them all
 together: a touch UI on [rlvgl](https://github.com/softoboros/rlvgl)
 with live sensors, a UART control protocol, and settings persisted
 in flash.
-
-The old ESP-IDF/LVGL version of this repo lives at git tag
-`pre-rewrite-espidf`.
 
 ## Quick start
 
